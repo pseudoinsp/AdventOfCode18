@@ -109,7 +109,7 @@ namespace Day6
             return coordinatesWithInfiniteSpace;
         }
 
-        static (IDictionary<Coordinate, int>, IDictionary<Coordinate, int>)CoordinateTerritoriesInBoundingRectangle(List<Coordinate> coordinates, Rectangle boundingRectangle)
+        static (IDictionary<Coordinate, int>, IDictionary<Coordinate, int>) CoordinateTerritoriesInBoundingRectangle(List<Coordinate> coordinates, Rectangle boundingRectangle)
         {
             var sw = Stopwatch.StartNew();
             var coordinatesWithInfiniteSpace = new HashSet<Coordinate>();
