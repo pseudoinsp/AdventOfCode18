@@ -11,64 +11,47 @@ namespace Day9
         {
             int playerNumber = 455;
             int lastMarbleValue = 7122300;
-            var marblesInCircle = new List<Marble>(lastMarbleValue*(21/23))
-            {
-                new Marble(0),
-                new Marble(1)
-            };
+            var marblesInCircle = new LinkedList<Marble>();
 
-
-            bool gameEnd = false;
-            int roundCount = 2;
-            int currentMarbleIndex = 1;
-
-
-            var playerScores = new Dictionary<int, int>();
-
+            marblesInCircle.AddFirst(new Marble(0));
+            marblesInCircle.AddLast(new Marble(1));
+            
+            var playerScores = new Dictionary<int, long>();
             for (int i = 0; i < playerNumber; i++)
             {
                 playerScores[i] = 0;
             }
 
+            bool gameEnd = false;
+            int roundCount = 2;
+            LinkedListNode<Marble> currentMarble = marblesInCircle.Last;
+
+            var sw = Stopwatch.StartNew();
             while (!gameEnd)
             {
-                var newMarbleToAdd = new Marble(roundCount);
-                int currentPlayerIndex = roundCount % playerNumber;
-
                 // point score
                 if (roundCount % 23 == 0)
                 {
-                    int additionalMarbleToTakeIndex;
-                    if (currentMarbleIndex > 7)
-                    {
-                        additionalMarbleToTakeIndex = currentMarbleIndex - 7;
-                    }
+                    var additionalMarbleToTake = GetNthCounterClockwiseElement(currentMarble, 7);
+
+                    if (additionalMarbleToTake.Next != null)
+                        currentMarble = additionalMarbleToTake.Next;
                     else
-                    {
-                        additionalMarbleToTakeIndex = marblesInCircle.Count - 7 + currentMarbleIndex;
-                    }
+                        currentMarble = marblesInCircle.First;
 
-                    var additionalMarbleToTake = marblesInCircle[additionalMarbleToTakeIndex];
+                    marblesInCircle.Remove(additionalMarbleToTake);
 
-                    marblesInCircle.RemoveAt(additionalMarbleToTakeIndex);
-
-                    playerScores[currentPlayerIndex] += additionalMarbleToTake.Value + roundCount;
-
-                    // not index + 1 since the clockwise neighbour takes the removed marble's place
-                    //currentMarbleIndex = additionalMarbleToTakeIndex + 1 == marblesInCircle.Count ? 0 : additionalMarbleToTakeIndex;
-                    currentMarbleIndex = additionalMarbleToTakeIndex;
+                    int currentPlayerIndex = roundCount % playerNumber;
+                    playerScores[currentPlayerIndex] += additionalMarbleToTake.Value.Value + roundCount;
                 }
                 else // standard placing
                 {
-                    int positionOfNewMarble;
+                    var newMarbleToAdd = new Marble(roundCount);
 
-                    if (currentMarbleIndex + 2 == marblesInCircle.Count)
-                        positionOfNewMarble = marblesInCircle.Count;
+                    if (currentMarble.Next == null)
+                        currentMarble = marblesInCircle.AddAfter(marblesInCircle.First, newMarbleToAdd);
                     else
-                        positionOfNewMarble = (currentMarbleIndex + 2) % marblesInCircle.Count;
-
-                    marblesInCircle.Insert(positionOfNewMarble, newMarbleToAdd);
-                    currentMarbleIndex = positionOfNewMarble;
+                        currentMarble = marblesInCircle.AddAfter(currentMarble.Next, newMarbleToAdd);
                 }
 
                 if (roundCount == lastMarbleValue)
@@ -76,10 +59,27 @@ namespace Day9
 
                 roundCount++;
             }
+            sw.Stop();
 
             var playerWithMaxPoint = playerScores.Aggregate((l, r) => l.Value > r.Value ? l : r);
             Console.WriteLine($"Winner: player {playerWithMaxPoint.Key} with value {playerWithMaxPoint.Value}");
+            Console.WriteLine($"Time: {sw.ElapsedMilliseconds} ms");
             Console.ReadKey();
+        }
+
+        static LinkedListNode<Marble> GetNthCounterClockwiseElement(LinkedListNode<Marble> from, int n)
+        {
+            var currentNode = from;
+
+            for (int i = 0; i < n; i++)
+            {
+                currentNode = currentNode.Previous;
+
+                if (currentNode == null)
+                    currentNode = from.List.Last;
+            }
+
+            return currentNode;
         }
     }
 

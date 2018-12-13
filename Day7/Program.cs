@@ -114,7 +114,7 @@ namespace Day7
                     prerequisiteStep = steps.First(s => s.Name == prerequisiteStepChar);
                 }
 
-                steps.First(s => s.Name == currentStepChar).Prerequisites.Add(prerequisiteStep);
+                currentStep.Prerequisites.Add(prerequisiteStep);
             }
 
             return steps;

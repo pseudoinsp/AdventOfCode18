@@ -40,6 +40,8 @@ namespace Day6
             // Task 2
             var safePlaces = coordinateTerritories.Item2.Where(kv => kv.Value < 10000);
 
+            Console.WriteLine($"Size of all locations which have <10000 aggregated distance from the coordinates: {safePlaces.Count()}");
+
             Console.ReadLine();
         }
 
