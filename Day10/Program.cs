@@ -52,7 +52,7 @@ namespace Day10
             return parsedCoordinates;
         }
 
-        // TODO use unusually low boundrectangle size instead!
+        // TODO use unusually low boundrectangle size to detect!
         static bool DetectMessageCandidate(List<Coordinate> coordinates)
         {
             IEnumerable<IGrouping<int, int>> yCoordinatesGrouped = coordinates.Select(c => c.X).GroupBy(x => x);
