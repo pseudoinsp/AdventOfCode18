@@ -44,11 +44,8 @@ namespace Day13
                             _map.Curves.Add(new Curve()
                             {
                                 Location = new Coordinate(lineIndex, inlineIndex),
-                                Type = new CurveType()
-                                {
-                                    HorizontalComponent = Direction.Left,
-                                    VerticalComponent = Direction.Down
-                                }
+                                HorizontalComponent = Direction.Left,
+                                VerticalComponent = Direction.Down
                             });
                         }
                         else // case /-
@@ -56,11 +53,8 @@ namespace Day13
                             _map.Curves.Add(new Curve()
                             {
                                 Location = new Coordinate(lineIndex, inlineIndex),
-                                Type = new CurveType()
-                                {
-                                    HorizontalComponent = Direction.Right,
-                                    VerticalComponent = Direction.Up
-                                }
+                                HorizontalComponent = Direction.Right,
+                                VerticalComponent = Direction.Up
                             });
                         }
                     }
@@ -75,11 +69,8 @@ namespace Day13
                             _map.Curves.Add(new Curve()
                             {
                                 Location = new Coordinate(lineIndex, inlineIndex),
-                                Type = new CurveType()
-                                {
-                                    HorizontalComponent = Direction.Left,
-                                    VerticalComponent = Direction.Up
-                                }
+                                HorizontalComponent = Direction.Left,
+                                VerticalComponent = Direction.Up
                             });
                         }
                         else // case \-
@@ -87,11 +78,8 @@ namespace Day13
                             _map.Curves.Add(new Curve()
                             {
                                 Location = new Coordinate(lineIndex, inlineIndex),
-                                Type = new CurveType()
-                                {
-                                    HorizontalComponent = Direction.Right,
-                                    VerticalComponent = Direction.Down
-                                }
+                                HorizontalComponent = Direction.Right,
+                                VerticalComponent = Direction.Down
                             });
                         }
                     }
@@ -142,7 +130,7 @@ namespace Day13
 
         static void SimulateTick()
         {
-           // PrintTrack();
+            // PrintTrack();
 
             var cartsInMoveOrder = _map.Carts.OrderBy(c => c.Location.X).ThenBy(c => c.Location.Y);
 
@@ -213,13 +201,13 @@ namespace Day13
                     {
                         var curve = _map.Curves.First(c => c.Location == new Coordinate(x, y));
 
-                        if (curve.Type.HorizontalComponent == Direction.Left && curve.Type.VerticalComponent == Direction.Up)
+                        if (curve.HorizontalComponent == Direction.Left && curve.VerticalComponent == Direction.Up)
                             Console.Write('a');
-                        else if(curve.Type.HorizontalComponent == Direction.Right && curve.Type.VerticalComponent == Direction.Down)
+                        else if (curve.HorizontalComponent == Direction.Right && curve.VerticalComponent == Direction.Down)
                             Console.Write('b');
-                        else if(curve.Type.HorizontalComponent == Direction.Left && curve.Type.VerticalComponent == Direction.Down)
+                        else if (curve.HorizontalComponent == Direction.Left && curve.VerticalComponent == Direction.Down)
                             Console.Write('1');
-                        else if (curve.Type.HorizontalComponent == Direction.Right && curve.Type.VerticalComponent == Direction.Up)
+                        else if (curve.HorizontalComponent == Direction.Right && curve.VerticalComponent == Direction.Up)
                             Console.Write('2');
                     }
                     else if (_map.Intersections.Any(c => c == new Coordinate(x, y)))
@@ -258,7 +246,35 @@ namespace Day13
 
     class Curve : MapElement
     {
-        public CurveType Type { get; set; }
+        public Direction HorizontalComponent
+        {
+            get => _horizontalComponent;
+            set
+            {
+                if (value == Direction.Up || value == Direction.Down)
+                {
+                    throw new ArgumentException();
+                }
+
+                _horizontalComponent = value;
+            }
+        }
+        public Direction VerticalComponent
+        {
+            get => _verticalComponent;
+            set
+            {
+                if (value == Direction.Left || value == Direction.Right)
+                {
+                    throw new ArgumentException();
+                }
+
+                _verticalComponent = value;
+            }
+        }
+
+        private Direction _horizontalComponent;
+        private Direction _verticalComponent;
     }
 
     [DebuggerDisplay("X: {Location.X}, Y: {Location.Y}")]
@@ -318,21 +334,52 @@ namespace Day13
         {
             if (Direction == Direction.Down || Direction == Direction.Up)
             {
-                Direction = curve.Type.HorizontalComponent;
+                Direction = curve.HorizontalComponent;
             }
             else
             {
-                Direction = curve.Type.VerticalComponent;
+                Direction = curve.VerticalComponent;
             }
         }
 
         private void HandleIntersection(Coordinate intersection)
         {
-            Direction nextDirection = DirectionHelper.CalculateNextDirection(Direction, _intersectionSeed);
+            Direction nextDirection = CalculateNextDirection(Direction, _intersectionSeed);
 
             Direction = nextDirection;
 
             _intersectionSeed++;
+        }
+
+        public static Direction CalculateNextDirection(Direction previousDirection, int seed)
+        {
+            // left
+            if (seed % 3 == 0)
+            {
+                if (previousDirection == Direction.Left)
+                {
+                    return Direction.Up;
+                }
+
+                return previousDirection + 3;
+            }
+            // straight
+            else if (seed % 3 == 1)
+            {
+                return previousDirection;
+            }
+            // right
+            else if (seed % 3 == 2)
+            {
+                if (previousDirection == Direction.Up)
+                {
+                    return Direction.Left;
+                }
+
+                return previousDirection - 3;
+            }
+
+            throw new ArgumentOutOfRangeException();
         }
 
         private int _intersectionSeed = 0;
@@ -381,79 +428,11 @@ namespace Day13
         }
     }
 
-    class CurveType
-    {
-        public Direction HorizontalComponent
-        {
-            get => _horizontalComponent;
-            set
-            {
-                if (value == Direction.Up || value == Direction.Down)
-                {
-                    throw new ArgumentException();
-                }
-
-                _horizontalComponent = value;
-            }
-        }
-        public Direction VerticalComponent
-        {
-            get => _verticalComponent;
-            set
-            {
-                if (value == Direction.Left || value == Direction.Right)
-                {
-                    throw new ArgumentException();
-                }
-
-                _verticalComponent = value;
-            }
-        }
-
-        private Direction _horizontalComponent;
-        private Direction _verticalComponent;
-    }
-
     enum Direction
     {
         Up = 0,
         Down = 6,
         Left = 9,
         Right = 3
-    }
-
-    // TODO .................................
-    static class DirectionHelper
-    {
-        public static Direction CalculateNextDirection(Direction previousDirection, int seed)
-        {
-            // left
-            if (seed % 3 == 0)
-            {
-                if (previousDirection == Direction.Left)
-                {
-                    return Direction.Up;
-                }
-
-                return previousDirection + 3;
-            }
-            // straight
-            else if (seed % 3 == 1)
-            {
-                return previousDirection;
-            }
-            // right
-            else if (seed % 3 == 2)
-            {
-                if (previousDirection == Direction.Up)
-                {
-                    return Direction.Left;
-                }
-
-                return previousDirection - 3;
-            }
-
-            throw new ArgumentOutOfRangeException();
-        }
     }
 }
