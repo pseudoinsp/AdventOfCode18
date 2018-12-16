@@ -15,17 +15,14 @@ namespace Day13
 
             ParseInput(inputReadingTask.Result);
 
-            _map.MinX = _map.Curves.Select(c => c.Location.X).Union(_map.Intersections.Select(i => i.X)).Min();
-            _map.MaxX = _map.Curves.Select(c => c.Location.X).Union(_map.Intersections.Select(i => i.X)).Max();
-            _map.MinY = _map.Curves.Select(c => c.Location.Y).Union(_map.Intersections.Select(i => i.Y)).Min();
-            _map.MaxY = _map.Curves.Select(c => c.Location.Y).Union(_map.Intersections.Select(i => i.Y)).Max();
-
-            while (!collisionDetected)
+            do
             {
                 SimulateTick();
             }
+            while (_map.Carts.Count != 1);
 
-            Console.WriteLine($"Location of first collision: ({collisionLocation.X},{collisionLocation.Y})");
+            // Task 2
+            Console.WriteLine($"Position of the last remaining cart: ({_map.Carts.First().Location.Y},{_map.Carts.First().Location.X})");
 
             Console.ReadLine();
         }
@@ -152,11 +149,11 @@ namespace Day13
             foreach (var cart in cartsInMoveOrder)
             {
                 cart.MoveTick();
-            }
-
-            if (DetectCollision(out collisionLocation))
-            {
-                collisionDetected = true;
+                // TODO ...
+                if (DetectCollision(out collisionLocation))
+                {
+                    _map.Carts.RemoveAll(c => c.Location == collisionLocation);
+                }
             }
 
             ticks++;
@@ -240,7 +237,6 @@ namespace Day13
 
         readonly static Map _map = new Map();
         static Coordinate collisionLocation;
-        static bool collisionDetected = false;
         static int ticks = 0;
     }
 
@@ -258,11 +254,6 @@ namespace Day13
         public List<Coordinate> Intersections { get; }
 
         public List<Cart> Carts { get; }
-
-        public int MinX { get; set; }
-        public int MinY { get; set; }
-        public int MaxX { get; set; }
-        public int MaxY { get; set; }
     }
 
     class Curve : MapElement
@@ -280,9 +271,6 @@ namespace Day13
         public void MoveTick()
         {
             var nextLocation = CalculateNextLocation();
-
-            if (nextLocation.X > Map.MaxX || nextLocation.X < Map.MinX || nextLocation.Y > Map.MaxY || nextLocation.Y < Map.MinY)
-                throw new InvalidOperationException();
 
             foreach (Curve curve in Map.Curves)
             {
