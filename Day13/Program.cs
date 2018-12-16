@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace Day13
 {
@@ -8,20 +11,258 @@ namespace Day13
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("Hello World!");
+            Task<string[]> inputReadingTask = File.ReadAllLinesAsync("..\\..\\..\\input.txt");
+
+            ParseInput(inputReadingTask.Result);
+
+            _map.MinX = _map.Curves.Select(c => c.Location.X).Union(_map.Intersections.Select(i => i.X)).Min();
+            _map.MaxX = _map.Curves.Select(c => c.Location.X).Union(_map.Intersections.Select(i => i.X)).Max();
+            _map.MinY = _map.Curves.Select(c => c.Location.Y).Union(_map.Intersections.Select(i => i.Y)).Min();
+            _map.MaxY = _map.Curves.Select(c => c.Location.Y).Union(_map.Intersections.Select(i => i.Y)).Max();
+
+            while (!collisionDetected)
+            {
+                SimulateTick();
+            }
+
+            Console.WriteLine($"Location of first collision: ({collisionLocation.X},{collisionLocation.Y})");
+
+            Console.ReadLine();
         }
+
+        static void ParseInput(string[] input)
+        {
+            for (int lineIndex = 0; lineIndex < input.Length; lineIndex++)
+            {
+                string line = input[lineIndex];
+                for (int inlineIndex = 0; inlineIndex < line.Length; inlineIndex++)
+                {
+                    if (line[inlineIndex] == '/')
+                    {
+                        // case _/ 
+                        if (inlineIndex != 0 &&
+                            (line[inlineIndex - 1] == '-' || line[inlineIndex - 1] == '>' || line[inlineIndex - 1] == '<' || line[inlineIndex - 1] == '+' || line[inlineIndex - 1] == '\\') &&
+                            (input[lineIndex - 1][inlineIndex] == '^' || input[lineIndex - 1][inlineIndex] == 'v' || input[lineIndex - 1][inlineIndex] == '+' || input[lineIndex - 1][inlineIndex] == '\\' || input[lineIndex - 1][inlineIndex] == '|'))
+                        {
+                            _map.Curves.Add(new Curve()
+                            {
+                                Location = new Coordinate(lineIndex, inlineIndex),
+                                Type = new CurveType()
+                                {
+                                    HorizontalComponent = Direction.Left,
+                                    VerticalComponent = Direction.Down
+                                }
+                            });
+                        }
+                        else // case /-
+                        {
+                            _map.Curves.Add(new Curve()
+                            {
+                                Location = new Coordinate(lineIndex, inlineIndex),
+                                Type = new CurveType()
+                                {
+                                    HorizontalComponent = Direction.Right,
+                                    VerticalComponent = Direction.Up
+                                }
+                            });
+                        }
+                    }
+                    if (line[inlineIndex] == '\\')
+                    {
+                        // case -\
+                        if (inlineIndex != 0 &&
+                            lineIndex + 1 < input.Length &&
+                            (line[inlineIndex - 1] == '-' || line[inlineIndex - 1] == '>' || line[inlineIndex - 1] == '<' || line[inlineIndex - 1] == '+' || line[inlineIndex - 1] == '/') &&
+                            (input[lineIndex + 1][inlineIndex] == '|' || input[lineIndex + 1][inlineIndex] == '^' || input[lineIndex + 1][inlineIndex] == 'v' || input[lineIndex + 1][inlineIndex] == '+' || input[lineIndex + 1][inlineIndex] == '/'))
+                        {
+                            _map.Curves.Add(new Curve()
+                            {
+                                Location = new Coordinate(lineIndex, inlineIndex),
+                                Type = new CurveType()
+                                {
+                                    HorizontalComponent = Direction.Left,
+                                    VerticalComponent = Direction.Up
+                                }
+                            });
+                        }
+                        else // case \-
+                        {
+                            _map.Curves.Add(new Curve()
+                            {
+                                Location = new Coordinate(lineIndex, inlineIndex),
+                                Type = new CurveType()
+                                {
+                                    HorizontalComponent = Direction.Right,
+                                    VerticalComponent = Direction.Down
+                                }
+                            });
+                        }
+                    }
+                    if (line[inlineIndex] == '+')
+                    {
+                        _map.Intersections.Add(new Coordinate(lineIndex, inlineIndex));
+                    }
+                    if (line[inlineIndex] == 'v')
+                    {
+                        _map.Carts.Add(new Cart()
+                        {
+                            Direction = Direction.Up,
+                            Location = new Coordinate(lineIndex, inlineIndex),
+                            Map = _map
+                        });
+                    }
+                    if (line[inlineIndex] == '^')
+                    {
+                        _map.Carts.Add(new Cart()
+                        {
+                            Direction = Direction.Down,
+                            Location = new Coordinate(lineIndex, inlineIndex),
+                            Map = _map
+                        });
+                    }
+                    if (line[inlineIndex] == '>')
+                    {
+                        _map.Carts.Add(new Cart()
+                        {
+                            Direction = Direction.Right,
+                            Location = new Coordinate(lineIndex, inlineIndex),
+                            Map = _map
+                        });
+                    }
+                    if (line[inlineIndex] == '<')
+                    {
+                        _map.Carts.Add(new Cart()
+                        {
+                            Direction = Direction.Left,
+                            Location = new Coordinate(lineIndex, inlineIndex),
+                            Map = _map
+                        });
+                    }
+                }
+            }
+        }
+
+
+        static void SimulateTick()
+        {
+           // PrintTrack();
+
+            var cartsInMoveOrder = _map.Carts.OrderBy(c => c.Location.X).ThenBy(c => c.Location.Y);
+
+            foreach (var cart in cartsInMoveOrder)
+            {
+                cart.MoveTick();
+            }
+
+            if (DetectCollision(out collisionLocation))
+            {
+                collisionDetected = true;
+            }
+
+            ticks++;
+        }
+
+        static bool DetectCollision(out Coordinate Where)
+        {
+            IEnumerable<Coordinate> duplicates = _map.Carts.Select(c => c.Location).GroupBy(l => l).Where(g => g.Count() > 1).Select(g => g.Key);
+
+            if (duplicates.Any())
+            {
+                Where = duplicates.First();
+                return true;
+            }
+
+            Where = new Coordinate();
+            return false;
+        }
+
+        static void PrintTrack()
+        {
+            int minX = _map.Curves.Select(c => c.Location.X).Union(_map.Intersections.Select(i => i.X)).Min();
+            int maxX = _map.Curves.Select(c => c.Location.X).Union(_map.Intersections.Select(i => i.X)).Max();
+            int minY = _map.Curves.Select(c => c.Location.Y).Union(_map.Intersections.Select(i => i.Y)).Min();
+            int maxY = _map.Curves.Select(c => c.Location.Y).Union(_map.Intersections.Select(i => i.Y)).Max();
+
+            Console.WriteLine();
+            for (int x = minX; x <= maxX; x++)
+            {
+                Console.WriteLine();
+                Console.Write($"{x + 1} ");
+                for (int y = minY; y <= maxY; y++)
+                {
+                    if (_map.Carts.Any(c => c.Location == new Coordinate(x, y)))
+                    {
+                        var cart = _map.Carts.First(c => c.Location == new Coordinate(x, y));
+
+                        switch (cart.Direction)
+                        {
+                            case Direction.Up:
+                                Console.Write('v');
+                                break;
+                            case Direction.Down:
+                                Console.Write('^');
+                                break;
+                            case Direction.Left:
+                                Console.Write('<');
+                                break;
+                            case Direction.Right:
+                                Console.Write('>');
+                                break;
+                            default:
+                                throw new ArgumentException();
+                        }
+                    }
+                    else if (_map.Curves.Any(c => c.Location == new Coordinate(x, y)))
+                    {
+                        var curve = _map.Curves.First(c => c.Location == new Coordinate(x, y));
+
+                        if (curve.Type.HorizontalComponent == Direction.Left && curve.Type.VerticalComponent == Direction.Up)
+                            Console.Write('a');
+                        else if(curve.Type.HorizontalComponent == Direction.Right && curve.Type.VerticalComponent == Direction.Down)
+                            Console.Write('b');
+                        else if(curve.Type.HorizontalComponent == Direction.Left && curve.Type.VerticalComponent == Direction.Down)
+                            Console.Write('1');
+                        else if (curve.Type.HorizontalComponent == Direction.Right && curve.Type.VerticalComponent == Direction.Up)
+                            Console.Write('2');
+                    }
+                    else if (_map.Intersections.Any(c => c == new Coordinate(x, y)))
+                    {
+                        Console.Write('+');
+                    }
+
+                    else
+                        Console.Write(' ');
+                }
+
+                Console.Write($"  {x + 1}");
+            }
+        }
+
+        readonly static Map _map = new Map();
+        static Coordinate collisionLocation;
+        static bool collisionDetected = false;
+        static int ticks = 0;
     }
 
-    class Track
+    class Map
     {
+        public Map()
+        {
+            Curves = new List<Curve>();
+            Intersections = new List<Coordinate>();
+            Carts = new List<Cart>();
+        }
+
         public List<Curve> Curves { get; }
 
-        public List<Intersection> Intersections { get; }
-    }
+        public List<Coordinate> Intersections { get; }
 
-    class Intersection : MapElement
-    {
-        public IDictionary<Direction, Track> IntersectingTracks { get; }
+        public List<Cart> Carts { get; }
+
+        public int MinX { get; set; }
+        public int MinY { get; set; }
+        public int MaxX { get; set; }
+        public int MaxY { get; set; }
     }
 
     class Curve : MapElement
@@ -29,31 +270,37 @@ namespace Day13
         public CurveType Type { get; set; }
     }
 
+    [DebuggerDisplay("X: {Location.X}, Y: {Location.Y}")]
     class Cart : MapElement
     {
-        public Track OnTrack { get; set; }
+        public Map Map { get; set; }
 
         public Direction Direction { get; set; }
 
         public void MoveTick()
         {
             var nextLocation = CalculateNextLocation();
-            
-            foreach (Curve curve in OnTrack.Curves)
+
+            if (nextLocation.X > Map.MaxX || nextLocation.X < Map.MinX || nextLocation.Y > Map.MaxY || nextLocation.Y < Map.MinY)
+                throw new InvalidOperationException();
+
+            foreach (Curve curve in Map.Curves)
             {
-                if(curve.Location == nextLocation)
+                if (curve.Location == nextLocation)
                 {
                     HandleCurve(curve);
                 }
             }
 
-            foreach (Intersection intersection in OnTrack.Intersections)
+            foreach (var intersection in Map.Intersections)
             {
-                if (intersection.Location == nextLocation)
+                if (intersection == nextLocation)
                 {
-
+                    HandleIntersection(intersection);
                 }
             }
+
+            Location = nextLocation;
         }
 
         private Coordinate CalculateNextLocation()
@@ -69,11 +316,11 @@ namespace Day13
             }
             else if (Direction == Direction.Left)
             {
-                nextLocation = new Coordinate(Location.Y - 1, Location.Y);
+                nextLocation = new Coordinate(Location.X, Location.Y - 1);
             }
             else
             {
-                nextLocation = new Coordinate(Location.Y + 1, Location.Y);
+                nextLocation = new Coordinate(Location.X, Location.Y + 1);
             }
 
             return nextLocation;
@@ -81,7 +328,7 @@ namespace Day13
 
         private void HandleCurve(Curve curve)
         {
-            if(Direction == Direction.Down || Direction == Direction.Up)
+            if (Direction == Direction.Down || Direction == Direction.Up)
             {
                 Direction = curve.Type.HorizontalComponent;
             }
@@ -91,12 +338,13 @@ namespace Day13
             }
         }
 
-        private void HandleIntersection(Intersection intersection)
+        private void HandleIntersection(Coordinate intersection)
         {
-            Direction enteringDirection = intersection.IntersectingTracks.First(t => t.Value == OnTrack).Key;
-            Direction nextDirection = DirectionHelper.CalculateNextDirection(enteringDirection, _intersectionSeed);
+            Direction nextDirection = DirectionHelper.CalculateNextDirection(Direction, _intersectionSeed);
 
+            Direction = nextDirection;
 
+            _intersectionSeed++;
         }
 
         private int _intersectionSeed = 0;
@@ -107,6 +355,7 @@ namespace Day13
         public Coordinate Location { get; set; }
     }
 
+    [DebuggerDisplay("X: {X}, Y: {Y}")]
     internal struct Coordinate : IEquatable<Coordinate>
     {
         public Coordinate(int x, int y)
@@ -120,14 +369,14 @@ namespace Day13
 
         public override bool Equals(object other)
         {
-            return other is Coordinate && Equals((Coordinate) other);
+            return other is Coordinate && Equals((Coordinate)other);
         }
 
         public bool Equals(Coordinate other)
         {
             return other.X == X && other.Y == Y;
         }
-        
+
         public static bool operator ==(Coordinate c1, Coordinate c2)
         {
             return c1.Equals(c2);
@@ -162,7 +411,7 @@ namespace Day13
         public Direction VerticalComponent
         {
             get => _verticalComponent;
-            set 
+            set
             {
                 if (value == Direction.Left || value == Direction.Right)
                 {
@@ -188,27 +437,22 @@ namespace Day13
     // TODO .................................
     static class DirectionHelper
     {
-        public  static Direction CalculateNextDirection(Direction previousDirection, int seed)
+        public static Direction CalculateNextDirection(Direction previousDirection, int seed)
         {
             // left
-            if(seed % 3 == 0)
+            if (seed % 3 == 0)
             {
-                if(previousDirection == Direction.Left)
+                if (previousDirection == Direction.Left)
                 {
                     return Direction.Up;
                 }
 
                 return previousDirection + 3;
             }
-            // straigth
-            else if(seed % 3 == 1)
+            // straight
+            else if (seed % 3 == 1)
             {
-                if (previousDirection == Direction.Left || previousDirection == Direction.Down)
-                {
-                    return previousDirection - 6;
-                }
-
-                return previousDirection + 6;
+                return previousDirection;
             }
             // right
             else if (seed % 3 == 2)
