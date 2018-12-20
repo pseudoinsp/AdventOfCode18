@@ -6,9 +6,12 @@ namespace Day14
 {
     class Program
     {
+        static int[] scoreSequenceToMatch = new int[6] { 8, 2, 5, 4, 0, 1 };
+        static bool matchFound = false;
+
         static void Main(string[] args)
         {
-            int endRecipeNumber = 825401;
+            
 
             var recipeScores = new List<int>()
             {
@@ -22,7 +25,10 @@ namespace Day14
                 1
             };
 
-            while (recipeScores.Count <= endRecipeNumber + 10)
+            
+            List<int> last6Digits = new List<int> { 3,7,0,0,0,0 };
+
+            while (!matchFound)
             {
                 int selectedRecipeScoresSum = 0;
                 foreach (var index in selectedRecipeIndexes)
@@ -41,11 +47,35 @@ namespace Day14
                 if(selectedRecipeScoresSum > 9)
                 {
                     recipeScores.Add(selectedRecipeScoresSum / 10);
+
+                    //AddNewScoreToLastScores(recipeScores, selectedRecipeScoresSum / 10);
+                    last6Digits = last6Digits.Skip(1).Take(5).ToList();
+                    last6Digits.Add(selectedRecipeScoresSum / 10);
+                    if (last6Digits.SequenceEqual(scoreSequenceToMatch))
+                    {
+                        matchFound = true;
+                    }
+
                     recipeScores.Add(selectedRecipeScoresSum % 10);
+
+                    //AddNewScoreToLastScores(recipeScores, selectedRecipeScoresSum % 10);
+                    last6Digits = last6Digits.Skip(1).Take(5).ToList();
+                    last6Digits.Add(selectedRecipeScoresSum % 10);
+                    if (last6Digits.SequenceEqual(scoreSequenceToMatch))
+                    {
+                        matchFound = true;
+                    }
                 }
                 else
                 {
                     recipeScores.Add(selectedRecipeScoresSum);
+                    //AddNewScoreToLastScores(recipeScores, selectedRecipeScoresSum);
+                    last6Digits = last6Digits.Skip(1).Take(5).ToList();
+                    last6Digits.Add(selectedRecipeScoresSum);
+                    if (last6Digits.SequenceEqual(scoreSequenceToMatch))
+                    {
+                        matchFound = true;
+                    }
                 }
 
                 for (int i = 0; i < selectedRecipeIndexes.Count; i++)
@@ -55,16 +85,20 @@ namespace Day14
                 }
             }
 
-            var last10Scores = recipeScores.Skip(endRecipeNumber).Take(10);
-
-            Console.WriteLine("Last 10 scores: ");
-
-            foreach (var score in last10Scores)
-            {
-                Console.Write(score);
-            }
+            int scoresToRemove = last6Digits.SequenceEqual(scoreSequenceToMatch) ? 6 : 7;
+            Console.WriteLine($"Digit count before match: {recipeScores.Count - scoresToRemove}");
 
             Console.ReadKey();
+        }
+
+        static void AddNewScoreToLastScores(List<int> last6Digits, int newDigit)
+        {
+            last6Digits = last6Digits.Skip(1).Take(5).ToList();
+            last6Digits.Add(newDigit);
+            if (last6Digits.SequenceEqual(scoreSequenceToMatch))
+            {
+                matchFound = true;
+            }
         }
 
         static int CalculateNewSelectionIndex(List<int> recipeScores, int currentSelectionIndex)
@@ -78,6 +112,15 @@ namespace Day14
                 return 0 + currentSelectionIndex + indexToMoveRight - recipeCount;
             else
                 return currentSelectionIndex + indexToMoveRight;
+        }
+
+        static int GetFirstDigit(int number)
+        {
+            if (number < 10)
+            {
+                return number;
+            }
+            return GetFirstDigit((number - (number % 10)) / 10);
         }
     }
 }
