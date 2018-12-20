@@ -8,7 +8,7 @@ namespace Day14
     {
         static void Main(string[] args)
         {
-            int endRecipeNumber = 2018;
+            int endRecipeNumber = 825401;
 
             var recipeScores = new List<int>()
             {
@@ -30,11 +30,22 @@ namespace Day14
                     selectedRecipeScoresSum += recipeScores[index];
                 }
 
-                int prevCount = recipeScores.Count;
-                while (selectedRecipeScoresSum > 0)
+                // TODO debug this lol
+                //int prevCount = recipeScores.Count;
+                //while (selectedRecipeScoresSum > 0)
+                //{
+                //    recipeScores.Insert(prevCount, selectedRecipeScoresSum % 10);
+                //    selectedRecipeScoresSum /= 10;
+                //}
+
+                if(selectedRecipeScoresSum > 9)
                 {
-                    recipeScores.Insert(prevCount, selectedRecipeScoresSum % 10);
-                    selectedRecipeScoresSum /= 10;
+                    recipeScores.Add(selectedRecipeScoresSum / 10);
+                    recipeScores.Add(selectedRecipeScoresSum % 10);
+                }
+                else
+                {
+                    recipeScores.Add(selectedRecipeScoresSum);
                 }
 
                 for (int i = 0; i < selectedRecipeIndexes.Count; i++)
