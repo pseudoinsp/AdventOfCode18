@@ -139,12 +139,13 @@ namespace Day15
 
             var reachableEnemiesWithWhortestPaths = BreadthFirstShortestPath.ReachableEnemiesAndShortestPaths(Map, this);
 
+
+            // TODO if elf is circled -> reachableenemies is empty!
+
             if (!reachableEnemiesWithWhortestPaths.Any())
             {
                 return;
             }
-
-            // if adjacent to an enemy -> attack the enemy with the fewest hit points (if tied, first in the reading order), return
 
             var adjacentEnemies = reachableEnemiesWithWhortestPaths.Keys.Where(e => e.AdjacentTo(this.Location));
 
@@ -154,15 +155,6 @@ namespace Day15
                 Attack(adjacentEnemiesInOrder.First());
                 return;
             }
-
-            // else detect squares adjacent to reachable opponents
-            // TODO ????
-
-            // if no adjacent squres to any opponent and not adjacent to a target -> return 
-            // TODO ????
-
-            // if adjacent already -> dont move, only attack
-            // TODO ????
 
             // otherwise, find the adjacent which can be reached with the fewest steps (if tied, first in reading order)-> 
 
@@ -204,8 +196,8 @@ namespace Day15
 
         public bool AdjacentTo(Coordinate coordinate)
         {
-            return Math.Abs(this.Location.X - coordinate.X) == 1 ||
-                Math.Abs(this.Location.Y - coordinate.Y) == 1;
+            return this.Location.X == coordinate.X && Math.Abs(this.Location.Y - coordinate.Y) == 1 ||
+                this.Location.Y == coordinate.Y && Math.Abs(this.Location.X - coordinate.X) == 1;
         }
     }
 
@@ -347,13 +339,13 @@ namespace Day15
                 }
                 
                 var c2 = new Coordinate(location.X - 1, location.Y);
-                if (!wallLocations.Contains(c2) || !playerLocations.Contains(c2))
+                if (!wallLocations.Contains(c2) && !playerLocations.Contains(c2))
                 {
                     adjacentPossiblyReachableSquaresToEnemies[enemy].Add(c2);
                 }
                 
                 var c3 = new Coordinate(location.X, location.Y + 1);
-                if (!wallLocations.Contains(c3) || !playerLocations.Contains(c3))
+                if (!wallLocations.Contains(c3) && !playerLocations.Contains(c3))
                 {
                     adjacentPossiblyReachableSquaresToEnemies[enemy].Add(c3);
                 }
@@ -362,7 +354,7 @@ namespace Day15
 
                 var c4 = new Coordinate(location.X, location.Y - 1);
 
-                if (!wallLocations.Contains(c4) || !playerLocations.Contains(c4))
+                if (!wallLocations.Contains(c4) && !playerLocations.Contains(c4))
                 {
                     adjacentPossiblyReachableSquaresToEnemies[enemy].Add(c4);
                 }
@@ -423,6 +415,7 @@ namespace Day15
                 ret
             };
         }
+        
     }
 
     public class VisitedSquare
