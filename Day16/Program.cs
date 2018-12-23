@@ -94,8 +94,7 @@ namespace Day16
         {
             Dictionary<int, List<Type>> idsWithCandidates = codesToSamples.GroupBy(kv => kv.Key.OpCode)
                                                                           .ToDictionary(g => g.Key, g => g.Select(ge => ge.Value)
-                                                                                                          .SelectMany(ge => ge)
-                                                                                                          .Distinct()
+                                                                                                          .First()
                                                                                                           .ToList()
                                                                                        );
 
