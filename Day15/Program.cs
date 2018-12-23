@@ -369,7 +369,7 @@ namespace Day15
             }
 
             // Calculate the squares which are adjacent to enemies
-            // and they can be possibly reached (no wall, no other player, or the current player is already standing there)
+            // and they can be possibly reached (no wall, no other player unless its the current player already standing there)
             var adjacentPossiblyReachableSquaresToEnemies = new Dictionary<Player, List<Coordinate>>();
 
             var enemies = map.Players.Where(p => p.Team != fromPlayer.Team);
