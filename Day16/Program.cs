@@ -27,19 +27,6 @@ namespace Day16
 
             var applicableOPCodesOfSamples = new Dictionary<Sample, IList<Type>>();
 
-            HashSet<Type> remainingCodeIds = new HashSet<Type>()
-            {
-                typeof(Addr), typeof(Addi),
-                typeof(Mulr), typeof(Muli),
-                typeof(Banr), typeof(Bani),
-                typeof(Borr), typeof(Bori),
-                typeof(Setr), typeof(Seti),
-                typeof(Gtir), typeof(Gtri), typeof(Gtrr),
-                typeof(Eqir), typeof(Eqri), typeof(Eqrr)
-            };
-
-            IDictionary<IOPCode, int> opcodeIds = new Dictionary<IOPCode, int>();
-
             foreach (var sample in _samples)
             {
                 applicableOPCodesOfSamples.Add(sample, new List<Type>());
@@ -49,44 +36,9 @@ namespace Day16
                     if (opcode.CanBehave(sample))
                         applicableOPCodesOfSamples[sample].Add(opcode.GetType());
                 }
-
-                //if(applicableOPCodesOfSamples[sample].Count == 1)
-                //{
-                //    IOPCode opcode = applicableOPCodesOfSamples[sample].First();
-
-                //    if(remainingCodeIds.Contains(opcode.GetType()))
-                //    {
-                //        opcodeIds.Add(applicableOPCodesOfSamples[sample].First(), sample.Item2[0]);
-                //        remainingCodeIds.Remove(opcode.GetType());
-                //    }
-                //}
             }
 
-            IEnumerable<IGrouping<int, KeyValuePair<Sample, IList<Type>>>> samplesByOpcodes = applicableOPCodesOfSamples.GroupBy(kv => kv.Key.OpCode);
-
-            var codeCandidates = new Dictionary<int, List<Type>>();
-            foreach (var sampleGroup in samplesByOpcodes)
-            {
-                var candidates = new List<Type>()
-                {
-                    typeof(Addr), typeof(Addi),
-                    typeof(Mulr), typeof(Muli),
-                    typeof(Banr), typeof(Bani),
-                    typeof(Borr), typeof(Bori),
-                    typeof(Setr), typeof(Seti),
-                    typeof(Gtir), typeof(Gtri), typeof(Gtrr),
-                    typeof(Eqir), typeof(Eqri), typeof(Eqrr)
-                };
-
-                foreach (var samplesAndCodes in sampleGroup)
-                {
-                    candidates = candidates.Intersect(samplesAndCodes.Value).ToList();
-                }
-
-                codeCandidates.Add(sampleGroup.Key, candidates);
-            }
-
-            //var samplesWith1applicableOPcodes = applicableOPCodesOfSamples.Where(kv => kv.Value.Count == 1);
+            AssignIdToCodes(applicableOPCodesOfSamples);
 
             var samplesWith3applicableOPcodes = applicableOPCodesOfSamples.Where(kv => kv.Value.Count >= 3);
 
@@ -100,6 +52,37 @@ namespace Day16
             for (int i = 1; i < lines.Length; i += 4)
             {
                 _samples.Add(Sample.FromString(lines.Skip(i - 1).Take(3).ToArray()));
+            }
+        }
+        
+        static void AssignIdToCodes(Dictionary<Sample, IList<Type>> codesToSamples)
+        {
+            Dictionary<int, List<Type>> idsWithCandidates = codesToSamples.GroupBy(kv => kv.Key.OpCode)
+                                                                          .ToDictionary(g => g.Key, g => g.Select(ge => ge.Value)
+                                                                                                          .SelectMany(ge => ge)
+                                                                                                          .Distinct()
+                                                                                                          .ToList()
+                                                            );
+
+            while(idsWithCandidates.Any())
+            {
+                IList<KeyValuePair<int, List<Type>>> mappingFound = idsWithCandidates.Where(kv => kv.Value.Count == 1).ToList();
+
+                foreach (var mapping in mappingFound)
+                {
+                    var opCodeFound = _opCodes.Single(c => c.GetType() == mapping.Value.Single());
+                    opCodeFound.Id = mapping.Key;
+
+                    foreach (KeyValuePair<int, List<Type>> idWithCandidates in idsWithCandidates)
+                    {
+                        foreach (List<Type> candidatesList in idsWithCandidates.Values)
+                        {
+                            candidatesList.Remove(opCodeFound.GetType());
+                        }
+                    }
+
+                    idsWithCandidates.Remove(mapping.Key);
+                }
             }
         }
 
@@ -162,92 +145,99 @@ namespace Day16
 
         //void Execute(List<int> register, List<int> instruction);
 
-        //public int Id { get; set; }
+        int Id { get; set; }
     }
 
-    class Addr : IOPCode
+    abstract class OPCode : IOPCode
     {
-        public bool CanBehave(Sample sample)
+        public int Id { get; set; }
+
+        public abstract bool CanBehave(Sample sample);
+    }
+
+    class Addr : OPCode
+    {
+        public override bool CanBehave(Sample sample)
         {
             return sample.RegisterAfter[sample.Instruction[3]] == sample.RegisterBefore[sample.Instruction[1]] + sample.RegisterBefore[sample.Instruction[2]];
         }
     }
 
-    class Addi : IOPCode
+    class Addi : OPCode
     {
-        public bool CanBehave(Sample sample)
+        public override bool CanBehave(Sample sample)
         {
             return sample.RegisterAfter[sample.Instruction[3]] == sample.RegisterBefore[sample.Instruction[1]] + sample.Instruction[2];
         }
     }
 
-    class Mulr : IOPCode
+    class Mulr : OPCode
     {
-        public bool CanBehave(Sample sample)
+        public override bool CanBehave(Sample sample)
         {
             return sample.RegisterAfter[sample.Instruction[3]] == sample.RegisterBefore[sample.Instruction[1]] * sample.RegisterBefore[sample.Instruction[2]];
         }
     }
 
-    class Muli : IOPCode
+    class Muli : OPCode
     {
-        public bool CanBehave(Sample sample)
+        public override bool CanBehave(Sample sample)
         {
             return sample.RegisterAfter[sample.Instruction[3]] == sample.RegisterBefore[sample.Instruction[1]] * sample.Instruction[2];
         }
     }
 
-    class Banr : IOPCode
+    class Banr : OPCode
     {
-        public bool CanBehave(Sample sample)
+        public override bool CanBehave(Sample sample)
         {
             return sample.RegisterAfter[sample.Instruction[3]] == (sample.RegisterBefore[sample.Instruction[1]] & sample.RegisterBefore[sample.Instruction[2]]);
         }
     }
 
-    class Bani : IOPCode
+    class Bani : OPCode
     {
-        public bool CanBehave(Sample sample)
+        public override bool CanBehave(Sample sample)
         {
             return sample.RegisterAfter[sample.Instruction[3]] == (sample.RegisterBefore[sample.Instruction[1]] & sample.Instruction[2]);
         }
     }
 
-    class Borr : IOPCode
+    class Borr : OPCode
     {
-        public bool CanBehave(Sample sample)
+        public override bool CanBehave(Sample sample)
         {
             return sample.RegisterAfter[sample.Instruction[3]] == (sample.RegisterBefore[sample.Instruction[1]] | sample.RegisterBefore[sample.Instruction[2]]);
         }
     }
 
-    class Bori : IOPCode
+    class Bori : OPCode
     {
-        public bool CanBehave(Sample sample)
+        public override bool CanBehave(Sample sample)
         {
             return sample.RegisterAfter[sample.Instruction[3]] == (sample.RegisterBefore[sample.Instruction[1]] | sample.Instruction[2]);
         }
     }
 
-    class Setr : IOPCode
+    class Setr : OPCode
     {
-        public bool CanBehave(Sample sample)
+        public override bool CanBehave(Sample sample)
         {
             return sample.RegisterAfter[sample.Instruction[3]] == sample.RegisterBefore[sample.Instruction[1]];
         }
     }
 
-    class Seti : IOPCode
+    class Seti : OPCode
     {
-        public bool CanBehave(Sample sample)
+        public override bool CanBehave(Sample sample)
         {
             return sample.RegisterAfter[sample.Instruction[3]] == sample.Instruction[1];
         }
     }
 
-    class Gtir : IOPCode
+    class Gtir : OPCode
     {
-        public bool CanBehave(Sample sample)
+        public override bool CanBehave(Sample sample)
         {
             var AgreaterThanB = sample.Instruction[1] > sample.RegisterBefore[sample.Instruction[2]];
 
@@ -255,9 +245,9 @@ namespace Day16
         }
     }
 
-    class Gtri : IOPCode
+    class Gtri : OPCode
     {
-        public bool CanBehave(Sample sample)
+        public override bool CanBehave(Sample sample)
         {
             var AgreaterThanB = sample.RegisterBefore[sample.Instruction[1]] > sample.Instruction[2];
 
@@ -265,9 +255,9 @@ namespace Day16
         }
     }
 
-    class Gtrr : IOPCode
+    class Gtrr : OPCode
     {
-        public bool CanBehave(Sample sample)
+        public override bool CanBehave(Sample sample)
         {
             var AgreaterThanB = sample.RegisterBefore[sample.Instruction[1]] > sample.RegisterBefore[sample.Instruction[2]];
 
@@ -275,9 +265,9 @@ namespace Day16
         }
     }
 
-    class Eqir : IOPCode
+    class Eqir : OPCode
     {
-        public bool CanBehave(Sample sample)
+        public override bool CanBehave(Sample sample)
         {
             var AEqualsB = sample.Instruction[1] == sample.RegisterBefore[sample.Instruction[2]];
 
@@ -285,9 +275,9 @@ namespace Day16
         }
     }
 
-    class Eqri : IOPCode
+    class Eqri : OPCode
     {
-        public bool CanBehave(Sample sample)
+        public override bool CanBehave(Sample sample)
         {
             var AEqualsB = sample.RegisterBefore[sample.Instruction[1]] == sample.Instruction[2];
 
@@ -295,9 +285,9 @@ namespace Day16
         }
     }
 
-    class Eqrr : IOPCode
+    class Eqrr : OPCode
     {
-        public bool CanBehave(Sample sample)
+        public override bool CanBehave(Sample sample)
         {
             var AEqualsB = sample.RegisterBefore[sample.Instruction[1]] == sample.RegisterBefore[sample.Instruction[2]];
 
