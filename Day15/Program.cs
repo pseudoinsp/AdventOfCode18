@@ -294,7 +294,7 @@ namespace Day15
 
                 foreach (var square in squaresFromLastStep)
                 {
-                    var possiblenewSquares = new List<Coordinate>()
+                    var possiblenewCoordinates = new List<Coordinate>()
                     {
                         new Coordinate(square.Coordinate.X + 1, square.Coordinate.Y),
                         new Coordinate(square.Coordinate.X - 1, square.Coordinate.Y),
@@ -302,21 +302,31 @@ namespace Day15
                         new Coordinate(square.Coordinate.X, square.Coordinate.Y - 1),
                     };
 
-                    foreach (var newSquare in possiblenewSquares)
+                    foreach (var newCoordinate in possiblenewCoordinates)
                     {
-                        if (wallLocations.Contains(newSquare) || playerLocations.Contains(newSquare) || squaresAlreadyVisitedBeforeCurrentStep.Contains(newSquare))
+                        if (wallLocations.Contains(newCoordinate) || playerLocations.Contains(newCoordinate) || squaresAlreadyVisitedBeforeCurrentStep.Contains(newCoordinate))
                         {
                             continue;
                         }
 
-                        var newVisitedSquare = new VisitedSquare()
-                        {
-                            Coordinate = newSquare,
-                            InStep = currentStep,
-                        };
-                        newVisitedSquare.VisitedFrom.Add(square);
+                        var newVisitedSquare = visitedSquares.FirstOrDefault(sq => sq.Coordinate == newCoordinate);
 
-                        visitedSquares.Add(newVisitedSquare);
+                        if(newVisitedSquare == null)
+                        {
+                            var squareToAdd = new VisitedSquare()
+                            {
+                                Coordinate = newCoordinate,
+                                InStep = currentStep,
+                            };
+                            squareToAdd.VisitedFrom.Add(square);
+
+                            visitedSquares.Add(squareToAdd);
+                        }
+                        else // square has been already visited from an other square in this step
+                        {
+                            newVisitedSquare.VisitedFrom.Add(square);
+                        }
+
                         newSquareVisitedThisStep = true;
                     }
                 }
@@ -349,9 +359,7 @@ namespace Day15
                 {
                     adjacentPossiblyReachableSquaresToEnemies[enemy].Add(c3);
                 }
-
                 
-
                 var c4 = new Coordinate(location.X, location.Y - 1);
 
                 if (!wallLocations.Contains(c4) && !playerLocations.Contains(c4))
@@ -370,14 +378,14 @@ namespace Day15
 
                     if (visited != null)
                     {
-                        var paths = CreatePaths(visitedSquares, visited);
+                        var paths = SearchOptimalPath(visitedSquares, visited);
 
                         if (!ret2.ContainsKey(enemyWithAdjacentSqures.Key))
                         {
                             ret2.Add(enemyWithAdjacentSqures.Key, new List<Path>());
                         }
 
-                        ret2[enemyWithAdjacentSqures.Key].AddRange(paths);
+                        ret2[enemyWithAdjacentSqures.Key].Add(paths);
                     }
                 }
             }
@@ -392,30 +400,19 @@ namespace Day15
             return ret;
         }
 
-        public static List<Path> CreatePaths(List<VisitedSquare> squares, VisitedSquare to)
+        public static Path SearchOptimalPath(List<VisitedSquare> squares, VisitedSquare to)
         {
-            // TODO implement
-            //var branches = new List<Coordinate>();
-
-            //while (!branches.Any())
-            //{
-
-            //}
             var ret = new Path();
-            var current = to;
 
+            var current = to;
             while(current.VisitedFrom != null)
             {
                 ret.Steps.AddFirst(current.Coordinate);
-                current = current.VisitedFrom.First();
+                current = current.VisitedFrom.OrderBy(sq => sq.Coordinate.X).ThenBy(sq => sq.Coordinate.Y).First();
             }
 
-            return new List<Path>()
-            {
-                ret
-            };
+            return ret;
         }
-        
     }
 
     public class VisitedSquare
