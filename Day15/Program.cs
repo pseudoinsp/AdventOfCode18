@@ -13,9 +13,19 @@ namespace Day15
         {
             Task<string[]> inputReadingTask = File.ReadAllLinesAsync("..\\..\\..\\input.txt");
 
-            ParseInput(inputReadingTask.Result);
-
+            int elfAttackPower = 19;
             int roundCount = 0;
+            //do
+            //{
+            ParseInput(inputReadingTask.Result);
+            foreach (var elf in _map.Players.Where(p => p.Team == Teams.Elf))
+            {
+                elf.AttackValue = elfAttackPower;
+            }
+
+            //roundCount = 0;
+            //_map.ElfDied = false;
+
             do
             {
                 //PrintMap(roundCount);
@@ -23,6 +33,10 @@ namespace Day15
                 roundCount++;
             }
             while (_map.Players.GroupBy(p => p.Team).Count() != 1);
+
+            //elfAttackPower++;
+            //}
+            //while (_map.ElfDied == false);
 
             int remainingPlayersHitPoint = _map.Players.Sum(p => p.HP);
 
@@ -44,6 +58,9 @@ namespace Day15
 
         static void ParseInput(string[] input)
         {
+            _map.Players.Clear();
+            _map.Walls.Clear();
+
             for (int lineIndex = 0; lineIndex < input.Length; lineIndex++)
             {
                 string line = input[lineIndex];
@@ -114,6 +131,8 @@ namespace Day15
         public List<Player> Players { get; set; }
 
         public List<Wall> Walls { get; set; }
+
+        public bool ElfDied { get; set; } = false;
     }
 
     public abstract class MapElement
@@ -139,25 +158,21 @@ namespace Day15
 
         public int HP { get; set; }
 
-        public int AttackValue { get; }
+        public int AttackValue { get; set; }
 
         public void ExecuteRound()
         {
             // find all possible targets, if no possible target -> return
-
             var reachableEnemiesWithWhortestPaths = BreadthFirstShortestPath.ReachableEnemiesAndShortestPaths(Map, this);
-
-
-            // TODO if elf is circled -> reachableenemies is empty!
 
             if (!reachableEnemiesWithWhortestPaths.Any())
             {
                 return;
             }
 
+            // if already standing next to an enemy -> attack it
+            // if standing next to multiple enemies -> choose based on HP -> X -> Y
             var adjacentEnemies = reachableEnemiesWithWhortestPaths.Keys.Where(e => e.AdjacentTo(this.Location));
-            //var adjacentEnemies = reachableEnemiesWithWhortestPaths.Values.Where(e => e.Any(p => p.Length == 0));
-
             if (adjacentEnemies.Any())
             {
                 var adjacentEnemiesInOrder = adjacentEnemies.OrderBy(e => e.HP).ThenBy(e => e.Location.X).ThenBy(e => e.Location.Y);
@@ -165,8 +180,7 @@ namespace Day15
                 return;
             }
 
-            // otherwise, find the adjacent which can be reached with the fewest steps (if tied, first in reading order)-> 
-
+            // otherwise, find the square next to an enemy which can be reached with the fewest steps (if tied, first in reading order)-> 
             int shortestPath = reachableEnemiesWithWhortestPaths.Min(e => e.Value.First().Length);
 
             var enemiesWithShortestPath = reachableEnemiesWithWhortestPaths.Where(e => e.Value.First().Length == shortestPath);
@@ -192,7 +206,6 @@ namespace Day15
                     return;
                 }
             }
-
         }
 
         public void Attack(Player attackedPlayer)
@@ -200,7 +213,13 @@ namespace Day15
             attackedPlayer.HP -= this.AttackValue;
 
             if (attackedPlayer.HP <= 0)
+            {
+                if (attackedPlayer.Team == Teams.Elf)
+                {
+                    throw new InvalidOperationException();
+                }
                 Map.Players.Remove(attackedPlayer);
+            }
         }
 
         public bool AdjacentTo(Coordinate coordinate)
@@ -277,6 +296,9 @@ namespace Day15
     // https://youtu.be/KiCBXu4P-2Y?t=480
     public static class BreadthFirstShortestPath
     {
+        /// <summary>
+        /// Searches for the shortest path for each reachable enemy's adjacent square.
+        /// </summary>
         static public IDictionary<Player, List<Path>> ReachableEnemiesAndShortestPaths(Map map, Player fromPlayer)
         {
             bool newSquareVisitedThisStep = true;
@@ -294,6 +316,9 @@ namespace Day15
             var wallLocations = map.Walls.Select(w => w.Location);
             var playerLocations = map.Players.Select(p => p.Location);
 
+            // Visit the map starting from the given location
+            // Create a structure where the visited squares are stored
+            // also store that in which step they have been visited and from which square
             while (newSquareVisitedThisStep)
             {
                 newSquareVisitedThisStep = false;
@@ -320,7 +345,7 @@ namespace Day15
 
                         var visitedSquare = visitedSquares.FirstOrDefault(sq => sq.Coordinate == newCoordinate);
 
-                        if(visitedSquare == null) 
+                        if (visitedSquare == null)
                         {
                             var squareToAdd = new VisitedSquare()
                             {
@@ -343,45 +368,48 @@ namespace Day15
                 currentStep++;
             }
 
-            var enemies = map.Players.Where(p => p.Team != fromPlayer.Team);
+            // Calculate the squares which are adjacent to enemies
+            // and they can be possibly reached (no wall, no other player, or the current player is already standing there)
             var adjacentPossiblyReachableSquaresToEnemies = new Dictionary<Player, List<Coordinate>>();
 
-            foreach (var enemy in map.Players.Where(p => p.Team != fromPlayer.Team))
+            var enemies = map.Players.Where(p => p.Team != fromPlayer.Team);
+            foreach (var enemy in enemies)
             {
-                var location = enemy.Location;
+                var enemyLocation = enemy.Location;
                 adjacentPossiblyReachableSquaresToEnemies.Add(enemy, new List<Coordinate>());
-                var c1 = new Coordinate(location.X + 1, location.Y);
 
-                if ((!wallLocations.Contains(c1) && !playerLocations.Contains(c1)) ||
-                    c1 == fromPlayer.Location)
+                var rightSquare = new Coordinate(enemyLocation.X + 1, enemyLocation.Y);
+                if ((!wallLocations.Contains(rightSquare) && !playerLocations.Contains(rightSquare)) ||
+                    rightSquare == fromPlayer.Location)
                 {
-                    adjacentPossiblyReachableSquaresToEnemies[enemy].Add(c1);
+                    adjacentPossiblyReachableSquaresToEnemies[enemy].Add(rightSquare);
                 }
-                
-                var c2 = new Coordinate(location.X - 1, location.Y);
-                if ((!wallLocations.Contains(c2) && !playerLocations.Contains(c2)) ||
-                    c2 == fromPlayer.Location)
-                {
-                    adjacentPossiblyReachableSquaresToEnemies[enemy].Add(c2);
-                }
-                
-                var c3 = new Coordinate(location.X, location.Y + 1);
-                if ((!wallLocations.Contains(c3) && !playerLocations.Contains(c3)) ||
-                    c3 == fromPlayer.Location)
-                {
-                    adjacentPossiblyReachableSquaresToEnemies[enemy].Add(c3);
-                }
-                
-                var c4 = new Coordinate(location.X, location.Y - 1);
 
-                if ((!wallLocations.Contains(c4) && !playerLocations.Contains(c4)) ||
-                    c4 == fromPlayer.Location)
+                var leftSquare = new Coordinate(enemyLocation.X - 1, enemyLocation.Y);
+                if ((!wallLocations.Contains(leftSquare) && !playerLocations.Contains(leftSquare)) ||
+                    leftSquare == fromPlayer.Location)
                 {
-                    adjacentPossiblyReachableSquaresToEnemies[enemy].Add(c4);
+                    adjacentPossiblyReachableSquaresToEnemies[enemy].Add(leftSquare);
+                }
+
+                var upSquare = new Coordinate(enemyLocation.X, enemyLocation.Y + 1);
+                if ((!wallLocations.Contains(upSquare) && !playerLocations.Contains(upSquare)) ||
+                    upSquare == fromPlayer.Location)
+                {
+                    adjacentPossiblyReachableSquaresToEnemies[enemy].Add(upSquare);
+                }
+
+                var downSquare = new Coordinate(enemyLocation.X, enemyLocation.Y - 1);
+                if ((!wallLocations.Contains(downSquare) && !playerLocations.Contains(downSquare)) ||
+                    downSquare == fromPlayer.Location)
+                {
+                    adjacentPossiblyReachableSquaresToEnemies[enemy].Add(downSquare);
                 }
             }
 
-            var ret2 = new Dictionary<Player, List<Path>>();
+            // search these adjacent square in the visit structure.
+            // Create the optimal path to each of them.
+            var enemiesWithPathsToAdjacentSquares = new Dictionary<Player, List<Path>>();
 
             foreach (KeyValuePair<Player, List<Coordinate>> enemyWithAdjacentSqures in adjacentPossiblyReachableSquaresToEnemies)
             {
@@ -393,32 +421,36 @@ namespace Day15
                     {
                         var paths = SearchOptimalPath(visited);
 
-                        if (!ret2.ContainsKey(enemyWithAdjacentSqures.Key))
+                        if (!enemiesWithPathsToAdjacentSquares.ContainsKey(enemyWithAdjacentSqures.Key))
                         {
-                            ret2.Add(enemyWithAdjacentSqures.Key, new List<Path>());
+                            enemiesWithPathsToAdjacentSquares.Add(enemyWithAdjacentSqures.Key, new List<Path>());
                         }
 
-                        ret2[enemyWithAdjacentSqures.Key].Add(paths);
+                        enemiesWithPathsToAdjacentSquares[enemyWithAdjacentSqures.Key].Add(paths);
                     }
                 }
             }
 
-            var ret = new Dictionary<Player, List<Path>>();
-            foreach (var item in ret2)
+            // Out of all reachable adjacent squares of an enemy, search the shortest ones, and return them
+            var enemiesWithPathsToClosestAdjacentSquares = new Dictionary<Player, List<Path>>();
+            foreach (var item in enemiesWithPathsToAdjacentSquares)
             {
                 int minLength = item.Value.Min(p => p.Length);
-                ret.Add(item.Key, item.Value.Where(p => p.Length == minLength).ToList());
+                enemiesWithPathsToClosestAdjacentSquares.Add(item.Key, item.Value.Where(p => p.Length == minLength).ToList());
             }
 
-            return ret;
+            return enemiesWithPathsToClosestAdjacentSquares;
         }
 
+        /// <summary>
+        /// If multiple paths are existing to a square, at a branch, always chose the first one in the X,Y order.
+        /// </summary>
         public static Path SearchOptimalPath(VisitedSquare to)
         {
             var ret = new Path();
 
             var current = to;
-            while(current.VisitedFrom != null)
+            while (current.VisitedFrom != null)
             {
                 ret.Steps.AddFirst(current.Coordinate);
                 current = current.VisitedFrom.OrderBy(sq => sq.Coordinate.X).ThenBy(sq => sq.Coordinate.Y).First();
@@ -428,6 +460,9 @@ namespace Day15
         }
     }
 
+    /// <summary>
+    /// Helper structure for the visiting algorythm.
+    /// </summary>
     public class VisitedSquare
     {
         public VisitedSquare()
@@ -441,5 +476,4 @@ namespace Day15
 
         public List<VisitedSquare> VisitedFrom { get; set; }
     }
-
 }
