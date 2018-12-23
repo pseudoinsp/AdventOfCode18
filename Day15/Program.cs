@@ -15,13 +15,18 @@ namespace Day15
 
             ParseInput(inputReadingTask.Result);
 
+            int roundCount = 0;
             do
             {
-                PrintMap();
+                //PrintMap(roundCount);
                 SimulateRound();
-                
+                roundCount++;
             }
             while (_map.Players.GroupBy(p => p.Team).Count() != 1);
+
+            int remainingPlayersHitPoint = _map.Players.Sum(p => p.HP);
+
+            Console.WriteLine($"Round number * remaining hit points: {(roundCount - 1) * remainingPlayersHitPoint}");
 
             Console.ReadLine();
         }
@@ -61,14 +66,14 @@ namespace Day15
             }
         }
 
-        static void PrintMap()
+        static void PrintMap(int roundCount)
         {
             int minX = _map.Walls.Select(w => w.Location.X).Min();
             int maxX = _map.Walls.Select(w => w.Location.X).Max();
             int minY = _map.Walls.Select(w => w.Location.Y).Min();
             int maxY = _map.Walls.Select(w => w.Location.Y).Max();
 
-            Console.WriteLine();
+            Console.WriteLine($"Round count: {roundCount}");
             for (int x = minX; x <= maxX; x++)
             {
                 Console.WriteLine();
@@ -90,6 +95,9 @@ namespace Day15
                         Console.Write('.');
                 }
             }
+
+            Console.WriteLine();
+            Console.WriteLine();
         }
 
         public static Map _map = new Map();
@@ -148,6 +156,7 @@ namespace Day15
             }
 
             var adjacentEnemies = reachableEnemiesWithWhortestPaths.Keys.Where(e => e.AdjacentTo(this.Location));
+            //var adjacentEnemies = reachableEnemiesWithWhortestPaths.Values.Where(e => e.Any(p => p.Length == 0));
 
             if (adjacentEnemies.Any())
             {
@@ -162,9 +171,9 @@ namespace Day15
 
             var enemiesWithShortestPath = reachableEnemiesWithWhortestPaths.Where(e => e.Value.First().Length == shortestPath);
 
-            var enemyToStepOnward = enemiesWithShortestPath.OrderBy(e => e.Key.Location.X).ThenBy(e => e.Key.Location.Y).First();
+            var enemyToStepTowards = enemiesWithShortestPath.OrderBy(e => e.Key.Location.X).ThenBy(e => e.Key.Location.Y).First();
 
-            IEnumerable<Path> possiblePaths = enemyToStepOnward.Value;
+            IEnumerable<Path> possiblePaths = enemyToStepTowards.Value;
             var pathToUse = possiblePaths.OrderBy(p => p.Steps.First().X).ThenBy(p => p.Steps.First().Y).First();
             var stepToTake = pathToUse.Steps.First();
 
@@ -309,9 +318,9 @@ namespace Day15
                             continue;
                         }
 
-                        var newVisitedSquare = visitedSquares.FirstOrDefault(sq => sq.Coordinate == newCoordinate);
+                        var visitedSquare = visitedSquares.FirstOrDefault(sq => sq.Coordinate == newCoordinate);
 
-                        if(newVisitedSquare == null)
+                        if(visitedSquare == null) 
                         {
                             var squareToAdd = new VisitedSquare()
                             {
@@ -324,7 +333,7 @@ namespace Day15
                         }
                         else // square has been already visited from an other square in this step
                         {
-                            newVisitedSquare.VisitedFrom.Add(square);
+                            visitedSquare.VisitedFrom.Add(square);
                         }
 
                         newSquareVisitedThisStep = true;
@@ -343,26 +352,30 @@ namespace Day15
                 adjacentPossiblyReachableSquaresToEnemies.Add(enemy, new List<Coordinate>());
                 var c1 = new Coordinate(location.X + 1, location.Y);
 
-                if (!wallLocations.Contains(c1) && !playerLocations.Contains(c1))
+                if ((!wallLocations.Contains(c1) && !playerLocations.Contains(c1)) ||
+                    c1 == fromPlayer.Location)
                 {
                     adjacentPossiblyReachableSquaresToEnemies[enemy].Add(c1);
                 }
                 
                 var c2 = new Coordinate(location.X - 1, location.Y);
-                if (!wallLocations.Contains(c2) && !playerLocations.Contains(c2))
+                if ((!wallLocations.Contains(c2) && !playerLocations.Contains(c2)) ||
+                    c2 == fromPlayer.Location)
                 {
                     adjacentPossiblyReachableSquaresToEnemies[enemy].Add(c2);
                 }
                 
                 var c3 = new Coordinate(location.X, location.Y + 1);
-                if (!wallLocations.Contains(c3) && !playerLocations.Contains(c3))
+                if ((!wallLocations.Contains(c3) && !playerLocations.Contains(c3)) ||
+                    c3 == fromPlayer.Location)
                 {
                     adjacentPossiblyReachableSquaresToEnemies[enemy].Add(c3);
                 }
                 
                 var c4 = new Coordinate(location.X, location.Y - 1);
 
-                if (!wallLocations.Contains(c4) && !playerLocations.Contains(c4))
+                if ((!wallLocations.Contains(c4) && !playerLocations.Contains(c4)) ||
+                    c4 == fromPlayer.Location)
                 {
                     adjacentPossiblyReachableSquaresToEnemies[enemy].Add(c4);
                 }
@@ -378,7 +391,7 @@ namespace Day15
 
                     if (visited != null)
                     {
-                        var paths = SearchOptimalPath(visitedSquares, visited);
+                        var paths = SearchOptimalPath(visited);
 
                         if (!ret2.ContainsKey(enemyWithAdjacentSqures.Key))
                         {
@@ -400,7 +413,7 @@ namespace Day15
             return ret;
         }
 
-        public static Path SearchOptimalPath(List<VisitedSquare> squares, VisitedSquare to)
+        public static Path SearchOptimalPath(VisitedSquare to)
         {
             var ret = new Path();
 
