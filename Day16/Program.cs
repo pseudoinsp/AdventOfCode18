@@ -64,12 +64,26 @@ namespace Day16
 
             IEnumerable<IGrouping<int, KeyValuePair<Sample, IList<Type>>>> samplesByOpcodes = applicableOPCodesOfSamples.GroupBy(kv => kv.Key.OpCode);
 
+            var codeCandidates = new Dictionary<int, List<Type>>();
             foreach (var sampleGroup in samplesByOpcodes)
             {
-                foreach (KeyValuePair<Sample, IList<Type>> sample in sampleGroup)
+                var candidates = new List<Type>()
                 {
+                    typeof(Addr), typeof(Addi),
+                    typeof(Mulr), typeof(Muli),
+                    typeof(Banr), typeof(Bani),
+                    typeof(Borr), typeof(Bori),
+                    typeof(Setr), typeof(Seti),
+                    typeof(Gtir), typeof(Gtri), typeof(Gtrr),
+                    typeof(Eqir), typeof(Eqri), typeof(Eqrr)
+                };
 
+                foreach (var samplesAndCodes in sampleGroup)
+                {
+                    candidates = candidates.Intersect(samplesAndCodes.Value).ToList();
                 }
+
+                codeCandidates.Add(sampleGroup.Key, candidates);
             }
 
             //var samplesWith1applicableOPcodes = applicableOPCodesOfSamples.Where(kv => kv.Value.Count == 1);
@@ -85,7 +99,7 @@ namespace Day16
         {
             for (int i = 1; i < lines.Length; i += 4)
             {
-                _samples.Add(Sample.FromString(lines.Skip(i-1).Take(3).ToArray()));
+                _samples.Add(Sample.FromString(lines.Skip(i - 1).Take(3).ToArray()));
             }
         }
 
@@ -145,6 +159,10 @@ namespace Day16
     interface IOPCode
     {
         bool CanBehave(Sample sample);
+
+        //void Execute(List<int> register, List<int> instruction);
+
+        //public int Id { get; set; }
     }
 
     class Addr : IOPCode
