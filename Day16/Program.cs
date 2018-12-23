@@ -40,18 +40,53 @@ namespace Day16
 
             AssignIdToCodes(applicableOPCodesOfSamples);
 
-            var samplesWith3applicableOPcodes = applicableOPCodesOfSamples.Where(kv => kv.Value.Count >= 3);
+            var registerState = new List<int>()
+            {
+                0, 0, 0, 0
+            };
 
+            foreach (var instruction in _instructions)
+            {
+                var OPCodeToUse = _opCodes.First(c => c.Id == instruction[0]);
+
+                OPCodeToUse.Execute(registerState, instruction);
+            }
+            
+            // Task 1
+            var samplesWith3applicableOPcodes = applicableOPCodesOfSamples.Where(kv => kv.Value.Count >= 3);
             Console.WriteLine($"Samples with 3 or more applicable OpCodes: {samplesWith3applicableOPcodes.Count()}");
+
+            // Task 2
+            Console.WriteLine($"Final state of the register: ");
+
+            foreach (var reg in registerState)
+            {
+                Console.Write($"{reg} ");
+            }
 
             Console.ReadLine();
         }
 
         static void ParseInput(string[] lines)
         {
-            for (int i = 1; i < lines.Length; i += 4)
+            for (int i = 1; i <= 3113; i += 4)
             {
                 _samples.Add(Sample.FromString(lines.Skip(i - 1).Take(3).ToArray()));
+            }
+
+            for (int i = 3118; i < lines.Length; i++)
+            {
+                var instructionParts = lines[i].Split(' ');
+
+                List<int> instructions = new List<int>()
+                {
+                    int.Parse(instructionParts[0].ToString()),
+                    int.Parse(instructionParts[1].ToString()),
+                    int.Parse(instructionParts[2].ToString()),
+                    int.Parse(instructionParts[3].ToString()),
+                };
+
+                _instructions.Add(instructions);
             }
         }
         
@@ -62,7 +97,7 @@ namespace Day16
                                                                                                           .SelectMany(ge => ge)
                                                                                                           .Distinct()
                                                                                                           .ToList()
-                                                            );
+                                                                                       );
 
             while(idsWithCandidates.Any())
             {
@@ -87,6 +122,8 @@ namespace Day16
         }
 
         static IList<IOPCode> _opCodes;
+
+        static readonly List<List<int>> _instructions = new List<List<int>>();
 
         static readonly List<Sample> _samples = new List<Sample>();
     }
@@ -143,7 +180,7 @@ namespace Day16
     {
         bool CanBehave(Sample sample);
 
-        //void Execute(List<int> register, List<int> instruction);
+        void Execute(List<int> register, List<int> instruction);
 
         int Id { get; set; }
     }
@@ -153,6 +190,8 @@ namespace Day16
         public int Id { get; set; }
 
         public abstract bool CanBehave(Sample sample);
+
+        public abstract void Execute(List<int> register, List<int> instruction);
     }
 
     class Addr : OPCode
@@ -160,6 +199,11 @@ namespace Day16
         public override bool CanBehave(Sample sample)
         {
             return sample.RegisterAfter[sample.Instruction[3]] == sample.RegisterBefore[sample.Instruction[1]] + sample.RegisterBefore[sample.Instruction[2]];
+        }
+
+        public override void Execute(List<int> register, List<int> instruction)
+        {
+            register[instruction[3]] = register[instruction[1]] + register[instruction[2]];
         }
     }
 
@@ -169,6 +213,11 @@ namespace Day16
         {
             return sample.RegisterAfter[sample.Instruction[3]] == sample.RegisterBefore[sample.Instruction[1]] + sample.Instruction[2];
         }
+
+        public override void Execute(List<int> register, List<int> instruction)
+        {
+            register[instruction[3]] = register[instruction[1]] + instruction[2];
+        }
     }
 
     class Mulr : OPCode
@@ -176,6 +225,11 @@ namespace Day16
         public override bool CanBehave(Sample sample)
         {
             return sample.RegisterAfter[sample.Instruction[3]] == sample.RegisterBefore[sample.Instruction[1]] * sample.RegisterBefore[sample.Instruction[2]];
+        }
+
+        public override void Execute(List<int> register, List<int> instruction)
+        {
+            register[instruction[3]] = register[instruction[1]] * register[instruction[2]];
         }
     }
 
@@ -185,6 +239,11 @@ namespace Day16
         {
             return sample.RegisterAfter[sample.Instruction[3]] == sample.RegisterBefore[sample.Instruction[1]] * sample.Instruction[2];
         }
+
+        public override void Execute(List<int> register, List<int> instruction)
+        {
+            register[instruction[3]] = register[instruction[1]] * instruction[2];
+        }
     }
 
     class Banr : OPCode
@@ -192,6 +251,11 @@ namespace Day16
         public override bool CanBehave(Sample sample)
         {
             return sample.RegisterAfter[sample.Instruction[3]] == (sample.RegisterBefore[sample.Instruction[1]] & sample.RegisterBefore[sample.Instruction[2]]);
+        }
+
+        public override void Execute(List<int> register, List<int> instruction)
+        {
+            register[instruction[3]] = register[instruction[1]] & register[instruction[2]];
         }
     }
 
@@ -201,6 +265,11 @@ namespace Day16
         {
             return sample.RegisterAfter[sample.Instruction[3]] == (sample.RegisterBefore[sample.Instruction[1]] & sample.Instruction[2]);
         }
+
+        public override void Execute(List<int> register, List<int> instruction)
+        {
+            register[instruction[3]] = register[instruction[1]] & instruction[2];
+        }
     }
 
     class Borr : OPCode
@@ -208,6 +277,11 @@ namespace Day16
         public override bool CanBehave(Sample sample)
         {
             return sample.RegisterAfter[sample.Instruction[3]] == (sample.RegisterBefore[sample.Instruction[1]] | sample.RegisterBefore[sample.Instruction[2]]);
+        }
+
+        public override void Execute(List<int> register, List<int> instruction)
+        {
+            register[instruction[3]] = register[instruction[1]] | register[instruction[2]];
         }
     }
 
@@ -217,6 +291,11 @@ namespace Day16
         {
             return sample.RegisterAfter[sample.Instruction[3]] == (sample.RegisterBefore[sample.Instruction[1]] | sample.Instruction[2]);
         }
+
+        public override void Execute(List<int> register, List<int> instruction)
+        {
+            register[instruction[3]] = register[instruction[1]] | instruction[2];
+        }
     }
 
     class Setr : OPCode
@@ -225,6 +304,11 @@ namespace Day16
         {
             return sample.RegisterAfter[sample.Instruction[3]] == sample.RegisterBefore[sample.Instruction[1]];
         }
+
+        public override void Execute(List<int> register, List<int> instruction)
+        {
+            register[instruction[3]] = register[instruction[1]];
+        }
     }
 
     class Seti : OPCode
@@ -232,6 +316,11 @@ namespace Day16
         public override bool CanBehave(Sample sample)
         {
             return sample.RegisterAfter[sample.Instruction[3]] == sample.Instruction[1];
+        }
+
+        public override void Execute(List<int> register, List<int> instruction)
+        {
+            register[instruction[3]] = instruction[1];
         }
     }
 
@@ -243,6 +332,13 @@ namespace Day16
 
             return (sample.RegisterAfter[sample.Instruction[3]] == 1 && AgreaterThanB) || (sample.RegisterAfter[sample.Instruction[3]] == 0 && !AgreaterThanB);
         }
+
+        public override void Execute(List<int> register, List<int> instruction)
+        {
+            var AgreaterThanB = instruction[1] > register[instruction[2]];
+
+            register[instruction[3]] = AgreaterThanB ? 1 : 0;
+        }
     }
 
     class Gtri : OPCode
@@ -252,6 +348,13 @@ namespace Day16
             var AgreaterThanB = sample.RegisterBefore[sample.Instruction[1]] > sample.Instruction[2];
 
             return (sample.RegisterAfter[sample.Instruction[3]] == 1 && AgreaterThanB) || (sample.RegisterAfter[sample.Instruction[3]] == 0 && !AgreaterThanB);
+        }
+
+        public override void Execute(List<int> register, List<int> instruction)
+        {
+            var AgreaterThanB = register[instruction[1]] > instruction[2];
+
+            register[instruction[3]] = AgreaterThanB ? 1 : 0;
         }
     }
 
@@ -263,6 +366,13 @@ namespace Day16
 
             return (sample.RegisterAfter[sample.Instruction[3]] == 1 && AgreaterThanB) || (sample.RegisterAfter[sample.Instruction[3]] == 0 && !AgreaterThanB);
         }
+
+        public override void Execute(List<int> register, List<int> instruction)
+        {
+            var AgreaterThanB = register[instruction[1]] >  register[instruction[2]];
+
+            register[instruction[3]] = AgreaterThanB ? 1 : 0;
+        }
     }
 
     class Eqir : OPCode
@@ -272,6 +382,13 @@ namespace Day16
             var AEqualsB = sample.Instruction[1] == sample.RegisterBefore[sample.Instruction[2]];
 
             return (sample.RegisterAfter[sample.Instruction[3]] == 1 && AEqualsB) || (sample.RegisterAfter[sample.Instruction[3]] == 0 && !AEqualsB);
+        }
+
+        public override void Execute(List<int> register, List<int> instruction)
+        {
+            var AEqualsB = instruction[1] == register[instruction[2]];
+
+            register[instruction[3]] = AEqualsB ? 1 : 0;
         }
     }
 
@@ -283,6 +400,13 @@ namespace Day16
 
             return (sample.RegisterAfter[sample.Instruction[3]] == 1 && AEqualsB) || (sample.RegisterAfter[sample.Instruction[3]] == 0 && !AEqualsB);
         }
+
+        public override void Execute(List<int> register, List<int> instruction)
+        {
+            var AEqualsB = register[instruction[1]] == instruction[2];
+
+            register[instruction[3]] = AEqualsB ? 1 : 0;
+        }
     }
 
     class Eqrr : OPCode
@@ -292,6 +416,13 @@ namespace Day16
             var AEqualsB = sample.RegisterBefore[sample.Instruction[1]] == sample.RegisterBefore[sample.Instruction[2]];
 
             return (sample.RegisterAfter[sample.Instruction[3]] == 1 && AEqualsB) || (sample.RegisterAfter[sample.Instruction[3]] == 0 && !AEqualsB);
+        }
+
+        public override void Execute(List<int> register, List<int> instruction)
+        {
+            var AEqualsB = register[instruction[1]] == register[instruction[2]];
+
+            register[instruction[3]] = AEqualsB ? 1 : 0;
         }
     }
 }
