@@ -16,15 +16,14 @@ namespace Day12
 
             List<bool> firstGeneration;
             List<Rule> rules;
+            List<int> values = new List<int>();
 
             ParseInput(inputReadingTask.Result, out firstGeneration, out rules);
 
             var currentGeneration = firstGeneration;
-
-            var sw = Stopwatch.StartNew();
+            
             for (int gen = 0; gen <= generationsToSimulate; gen++)
             {
-                var sw2 = Stopwatch.StartNew();
                 Debug.WriteLine($"Gen {gen}");
                 if (gen == generationsToSimulate)
                     PrintGeneration(gen, currentGeneration);
@@ -44,23 +43,14 @@ namespace Day12
                     nextGeneration.Add(nextGenerationValue);
                 }
 
-                // sanitize
+                int value = GetValue(gen, currentGeneration);
+                values.Add(value);
 
-                while (nextGeneration[0] != true)
-                {
-                    nextGeneration.RemoveAt(0);
-                }
-                while (nextGeneration.Last() != true)
-                {
-                    nextGeneration.RemoveAt(nextGeneration.Count - 1);
-                }
+                if(values.Count >2)
+                    Console.WriteLine($"{values[values.Count - 1] - values[values.Count - 2]}");
 
                 currentGeneration = nextGeneration;
-                sw2.Stop();
-                Debug.WriteLine(sw2.ElapsedMilliseconds);
             }
-            sw.Stop();
-            Debug.WriteLine($"final: {sw.ElapsedMilliseconds}");
 
             Console.ReadKey();
         }
@@ -83,23 +73,7 @@ namespace Day12
 
         static void PrintGeneration(int genNumber, List<bool> plants)
         {
-            var sw = Stopwatch.StartNew();
-            int value = 0;
-            int newElementsOnTheLeft = genNumber * 2;
-            int leftValue = -1;
-            for (int i = newElementsOnTheLeft - 1; i >= 0; i--)
-            {
-                if (plants[i])
-                    value += leftValue;
-
-                leftValue--;
-            }
-            for (int i = newElementsOnTheLeft; i < plants.Count; i++)
-            {
-                if (plants[i])
-                    value += i - newElementsOnTheLeft;
-            }
-
+            var value = GetValue(genNumber, plants);
 
             Console.WriteLine($"Generation: {genNumber} - value: {value}");
             for (int i = 0; i < 20 - genNumber; i++)
@@ -116,8 +90,27 @@ namespace Day12
             }
             Console.WriteLine();
             Console.WriteLine();
-            sw.Stop();
-            Debug.WriteLine($"print:  {sw.ElapsedMilliseconds}");
+        }
+
+        static int GetValue(int genNumber, List<bool> plants)
+        {
+            int value = 0;
+            int newElementsOnTheLeft = genNumber * 2;
+            int leftValue = -1;
+            for (int i = newElementsOnTheLeft - 1; i >= 0; i--)
+            {
+                if (plants[i])
+                    value += leftValue;
+
+                leftValue--;
+            }
+            for (int i = newElementsOnTheLeft; i < plants.Count; i++)
+            {
+                if (plants[i])
+                    value += i - newElementsOnTheLeft;
+            }
+
+            return value;
         }
 
     }
