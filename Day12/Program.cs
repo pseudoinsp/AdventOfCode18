@@ -46,9 +46,13 @@ namespace Day12
                 int value = GetValue(gen, currentGeneration);
                 values.Add(value);
 
+                // Part 2
+                // Since after a given generation, the value increment will be constant, 
+                // the 50B gen's value can be calculated:
+                // (value of a generation after the constant increment) + ((50B - generationNumber)*constant increment)
                 if(values.Count >2)
                     Console.WriteLine($"{values[values.Count - 1] - values[values.Count - 2]}");
-
+                
                 currentGeneration = nextGeneration;
             }
 
